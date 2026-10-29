@@ -11,7 +11,6 @@ jobs:
     steps:
       - name: Configure Core RDP Settings
         run: |
-          # Enable Remote Desktop and disable Network Level Authentication (if needed)
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
                            -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
@@ -19,36 +18,45 @@ jobs:
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
                            -Name "SecurityLayer" -Value 0 -Force
 
-          # Remove any existing rule with the same name to avoid duplication
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
           
-          # For testing, allow any incoming connection on port 3389
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
 
-          # (Optional) Restart the Remote Desktop service to ensure changes take effect
           Restart-Service -Name TermService -Force
 
-      - name: Create RDP User
+      - name: Create RDP User with Policy Bypass
         run: |
-          $securePass = ConvertTo-SecureString "rdp" -AsPlainText -Force
-          New-LocalUser -Name "rdp" -Password $securePass -AccountNeverExpires -ErrorAction SilentlyContinue
-          Set-LocalUser -Name "rdp" -Password $securePass -ErrorAction SilentlyContinue
-          Enable-LocalUser -Name "rdp" -ErrorAction SilentlyContinue
+          # Disable Password Complexity Requirements
+          secedit /export /cfg C:\secpol.cfg
+          (Get-Content C:\secpol.cfg) -replace 'PasswordComplexity = 1', 'PasswordComplexity = 0' | Set-Content C:\secpol.cfg
+          (Get-Content C:\secpol.cfg) -replace 'MinimumPasswordLength = \d+', 'MinimumPasswordLength = 0' | Set-Content C:\secpol.cfg
+          secedit /configure /db C:\windows\security\local.sdb /cfg C:\secpol.cfg /areas SECURITYPOLICY
+          Remove-Item C:\secpol.cfg -Force
+
+          # Set User & Password
+          $securePass = ConvertTo-SecureString "rdp123456" -AsPlainText -Force
+          
+          $user = Get-LocalUser -Name "rdp" -ErrorAction SilentlyContinue
+          if (-not $user) {
+              New-LocalUser -Name "rdp" -Password $securePass -AccountNeverExpires
+          } else {
+              Set-LocalUser -Name "rdp" -Password $securePass
+              Enable-LocalUser -Name "rdp"
+          }
+
           Add-LocalGroupMember -Group "Administrators" -Member "rdp" -ErrorAction SilentlyContinue
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member "rdp" -ErrorAction SilentlyContinue
 
       - name: Download File, Extract & Install Automation Tools
         shell: pwsh
         run: |
-          # 1. Google Drive se file download karein
           Write-Host "Installing gdown..."
           pip install gdown -q
           Set-Location -Path "C:\Users\Public\Desktop"
           Write-Host "Downloading file from Google Drive..."
           gdown "https://drive.google.com/uc?id=1WgcAipfuH2bgC1tnsB7VtOTdf9qTq-1H"
           
-          # 2. File extract (unzip) karein
           $archives = Get-ChildItem -Path "C:\Users\Public\Desktop" | Where-Object { $_.Extension -match "\.(zip|rar)$" }
           foreach ($archive in $archives) {
               Write-Host "Extracting $($archive.Name)..."
@@ -56,7 +64,6 @@ jobs:
               Write-Host "Extracted successfully!"
           }
 
-          # 3. Macro Recorder Silent Setup
           Write-Host "Installing Macro Recorder..."
           $macroSetup = Get-ChildItem -Path "C:\Users\Public\Desktop" -Filter "*Macro*Recorder*.exe" -Recurse | Select-Object -First 1
           if ($macroSetup) {
@@ -69,13 +76,11 @@ jobs:
               }
           }
 
-          # 4. Chrome Extensions Setup
           $chromePolicyPath = "HKLM:\Software\Policies\Google\Chrome\ExtensionInstallForcelist"
           if (!(Test-Path $chromePolicyPath)) { New-Item -Path $chromePolicyPath -Force | Out-Null }
           New-ItemProperty -Path $chromePolicyPath -Name "1" -Value "majdfhpaihoncoakbjgbdhglocklcgno;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
           New-ItemProperty -Path $chromePolicyPath -Name "2" -Value "lfkgcfakbpblpflbjanpoaipofoodnen;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
 
-          # 5. Edge Extensions Setup
           $edgePolicyPath = "HKLM:\Software\Policies\Microsoft\Edge\ExtensionInstallForcelist"
           if (!(Test-Path $edgePolicyPath)) { New-Item -Path $edgePolicyPath -Force | Out-Null }
           New-ItemProperty -Path $edgePolicyPath -Name "1" -Value "majdfhpaihoncoakbjgbdhglocklcgno;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
@@ -92,10 +97,8 @@ jobs:
 
       - name: Establish Tailscale Connection
         run: |
-          # Bring up Tailscale with the provided auth key and set a unique hostname
           & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-$env:GITHUB_RUN_ID
           
-          # Wait for Tailscale to assign an IP
           $tsIP = $null
           $retries = 0
           while (-not $tsIP -and $retries -lt 10) {
@@ -112,26 +115,23 @@ jobs:
 
       - name: Verify RDP Accessibility
         run: |
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
+          Write-Host "$env:TAILSCALE_IP"
           
-          # Test connectivity using Test-NetConnection against the Tailscale IP on port 3389
           $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
           if (-not $testResult.TcpTestSucceeded) {
               Write-Error "TCP connection to RDP port 3389 failed"
               exit 1
           }
-          Write-Host "TCP connectivity successful!"
 
       - name: Maintain Connection
         run: |
-          Write-Host "`n=== RDP ACCESS ==="
-          Write-Host "Address: $env:TAILSCALE_IP"
-          Write-Host "Username: rdp"
-          Write-Host "Password: rdp"
+          Write-Host "`n=================="
+          Write-Host "$env:TAILSCALE_IP"
+          Write-Host "rdp"
+          Write-Host "rdp123456"
           Write-Host "==================`n"
           
-          # Keep runner active indefinitely (or until manually cancelled)
           while ($true) {
-              Write-Host "[$(Get-Date)] RDP Active - Use Ctrl+C in workflow to terminate"
+              Write-Host "[$(Get-Date)] RDP Active"
               Start-Sleep -Seconds 300
           }
