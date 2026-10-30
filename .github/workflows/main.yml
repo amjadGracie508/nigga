@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ts_hostname:
-        description: "Tailscale Hostname (e.g., ahmad1, ahmad2)"
+        description: "Tailscale Hostname (e.g., Amjad1, Amjad2)"
         required: true
         default: "Amjad1"
 
@@ -130,7 +130,7 @@ jobs:
           Write-Host "Tailscale IP: $env:TAILSCALE_IP"
           Write-Host "Hostname: ${{ github.event.inputs.ts_hostname }}"
           Write-Host "Username: rdp"
-          Write-Host "Password: rdp123456"
+          Write-Host "Password: Mtass$721"
           Write-Host "==================`n"
           
           # Wait 5 Hours 55 Minutes (355 minutes = 71 iterations of 5 minutes)
