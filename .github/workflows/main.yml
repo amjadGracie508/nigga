@@ -53,7 +53,7 @@ jobs:
           Add-LocalGroupMember -Group "Administrators" -Member "rdp" -ErrorAction SilentlyContinue
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member "rdp" -ErrorAction SilentlyContinue
 
-      - name: Download File, Move to Desktop Root & Install Automation Tools
+      - name: Download RAR File, Move to Desktop Root & Install Automation Tools
         shell: pwsh
         run: |
           Write-Host "Installing gdown..."
@@ -62,10 +62,10 @@ jobs:
           $desktopPath = "C:\Users\Public\Desktop"
           Set-Location -Path $desktopPath
           
-          Write-Host "Downloading file from Google Drive..."
-          gdown "https://drive.google.com/uc?id=1Xl3NQ06dCIVT2i1R0VCLLxoJ1LBDP4QV"
+          Write-Host "Downloading RAR file from Google Drive..."
+          gdown "https://drive.google.com/uc?id=1liaKavqfUbyqYsos_0NZuA1KWqq9r-HH"
           
-          # 1. Extract ZIP Archive
+          # 1. Extract RAR/ZIP Archive
           $archives = Get-ChildItem -Path $desktopPath | Where-Object { $_.Extension -match "\.(zip|rar)$" }
           foreach ($archive in $archives) {
               Write-Host "Extracting $($archive.Name)..."
