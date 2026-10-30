@@ -53,35 +53,44 @@ jobs:
           Add-LocalGroupMember -Group "Administrators" -Member "rdp" -ErrorAction SilentlyContinue
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member "rdp" -ErrorAction SilentlyContinue
 
-      - name: Download File, Extract & Install Automation Tools
+      - name: Download File, Move to Desktop Root & Install Automation Tools
         shell: pwsh
         run: |
           Write-Host "Installing gdown..."
           pip install gdown -q
-          Set-Location -Path "C:\Users\Public\Desktop"
-          Write-Host "Downloading file from Google Drive..."
-          gdown "https://drive.google.com/uc?id=1WgcAipfuH2bgC1tnsB7VtOTdf9qTq-1H"
           
-          $archives = Get-ChildItem -Path "C:\Users\Public\Desktop" | Where-Object { $_.Extension -match "\.(zip|rar)$" }
+          $desktopPath = "C:\Users\Public\Desktop"
+          Set-Location -Path $desktopPath
+          
+          Write-Host "Downloading file from Google Drive..."
+          gdown "https://drive.google.com/uc?id=1Xl3NQ06dCIVT2i1R0VCLLxoJ1LBDP4QV"
+          
+          # 1. Extract ZIP Archive
+          $archives = Get-ChildItem -Path $desktopPath | Where-Object { $_.Extension -match "\.(zip|rar)$" }
           foreach ($archive in $archives) {
               Write-Host "Extracting $($archive.Name)..."
-              7z x "$($archive.FullName)" -o"C:\Users\Public\Desktop" -y
+              7z x "$($archive.FullName)" -o"$desktopPath" -y
               Write-Host "Extracted successfully!"
           }
 
-          Write-Host "Installing Macro Recorder..."
-          $macroSetup = Get-ChildItem -Path "C:\Users\Public\Desktop" -Filter "*Macro*Recorder*.exe" -Recurse | Select-Object -First 1
-          if ($macroSetup) {
-              Start-Process -FilePath $macroSetup.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/S", "/quiet" -NoNewWindow
-              Write-Host "Macro Recorder Installed!"
-          } else {
-              $exeFiles = Get-ChildItem -Path "C:\Users\Public\Desktop" -Filter "*.exe" -Recurse
-              foreach ($exe in $exeFiles) {
-                  Start-Process -FilePath $exe.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/S", "/quiet" -NoNewWindow
+          # 2. Copy all files from nested inner folders directly to Desktop Root
+          Write-Host "Moving all subfolder contents to Desktop root..."
+          Get-ChildItem -Path $desktopPath -Recurse -File | ForEach-Object {
+              if ($_.DirectoryName -ne $desktopPath) {
+                  Copy-Item -Path $_.FullName -Destination $desktopPath -Force
               }
           }
 
-          # 1. Google Chrome Extensions Setup Only
+          # 3. Install Macro Recorder / Auto Clicker EXEs
+          Write-Host "Searching and installing EXE automation setups..."
+          $exeFiles = Get-ChildItem -Path $desktopPath -Filter "*.exe" -Recurse
+          foreach ($exe in $exeFiles) {
+              Write-Host "Installing $($exe.Name)..."
+              Start-Process -FilePath $exe.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/S", "/quiet" -NoNewWindow -Wait
+          }
+          Write-Host "All automation tools processing completed!"
+
+          # 4. Google Chrome Extensions Setup
           $chromePolicyPath = "HKLM:\Software\Policies\Google\Chrome\ExtensionInstallForcelist"
           if (!(Test-Path $chromePolicyPath)) { New-Item -Path $chromePolicyPath -Force | Out-Null }
           New-ItemProperty -Path $chromePolicyPath -Name "1" -Value "majdfhpaihoncoakbjgbdhglocklcgno;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
@@ -98,7 +107,6 @@ jobs:
 
       - name: Establish Tailscale Connection
         run: |
-          # Uses the custom hostname provided when running the workflow
           & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=${{ github.event.inputs.ts_hostname }} --accept-routes
           
           $tsIP = $null
@@ -133,7 +141,6 @@ jobs:
           Write-Host "Password: rdp123456"
           Write-Host "==================`n"
           
-          # Wait 5 Hours 55 Minutes (355 minutes = 71 iterations of 5 minutes)
           for ($i = 0; $i -lt 71; $i++) {
               Write-Host "[$(Get-Date)] RDP Active"
               Start-Sleep -Seconds 300
