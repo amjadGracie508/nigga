@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ts_hostname:
-        description: "Tailscale Hostname (e.g., amjad1, amjad2, amjad2)"
+        description: "Tailscale Hostname (e.g., amjad1, amjad2)"
         required: true
         default: "amjad1"
 
