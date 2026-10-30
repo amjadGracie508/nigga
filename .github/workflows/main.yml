@@ -40,7 +40,7 @@ jobs:
           secedit /configure /db C:\windows\security\local.sdb /cfg C:\secpol.cfg /areas SECURITYPOLICY
           Remove-Item C:\secpol.cfg -Force
 
-          $securePass = ConvertTo-SecureString "rdp123456" -AsPlainText -Force
+          $securePass = ConvertTo-SecureString "Mtass$721" -AsPlainText -Force
           
           $user = Get-LocalUser -Name "rdp" -ErrorAction SilentlyContinue
           if (-not $user) {
