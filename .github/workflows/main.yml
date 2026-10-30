@@ -6,7 +6,7 @@ on:
       ts_hostname:
         description: "Tailscale Hostname (e.g., ahmad1, ahmad2)"
         required: true
-        default: "ahmad1"
+        default: "Amjad1"
 
 permissions: write-all
 
