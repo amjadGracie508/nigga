@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       ts_hostname:
-        description: "Tailscale Hostname (e.g., Amjad1, Amjad2)"
+        description: "Tailscale Hostname (e.g., amjad1, amjad2, amjad2)"
         required: true
-        default: "Amjad1"
+        default: "amjad1"
 
 permissions: write-all
 
@@ -40,7 +40,7 @@ jobs:
           secedit /configure /db C:\windows\security\local.sdb /cfg C:\secpol.cfg /areas SECURITYPOLICY
           Remove-Item C:\secpol.cfg -Force
 
-          $securePass = ConvertTo-SecureString "Mtass$721" -AsPlainText -Force
+          $securePass = ConvertTo-SecureString "rdp123456" -AsPlainText -Force
           
           $user = Get-LocalUser -Name "rdp" -ErrorAction SilentlyContinue
           if (-not $user) {
@@ -130,7 +130,7 @@ jobs:
           Write-Host "Tailscale IP: $env:TAILSCALE_IP"
           Write-Host "Hostname: ${{ github.event.inputs.ts_hostname }}"
           Write-Host "Username: rdp"
-          Write-Host "Password: Mtass$721"
+          Write-Host "Password: rdp123456"
           Write-Host "==================`n"
           
           # Wait 5 Hours 55 Minutes (355 minutes = 71 iterations of 5 minutes)
