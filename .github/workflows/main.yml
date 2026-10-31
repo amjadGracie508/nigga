@@ -62,8 +62,8 @@ jobs:
           $rarPath = "$desktopPath\ahmad.rar"
           $extractPath = "$desktopPath\ahmad_extracted"
           
-          # نیا گوگل ڈرائیو ڈاؤن لوڈ لنک یہاں اپ ڈیٹ کر دیا گیا ہے
-          $directUrl = "https://drive.google.com/uc?export=download&id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53"
+          # Updated Google Drive direct download link with virus warning bypass
+          $directUrl = "https://drive.usercontent.google.com/download?id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53&export=download&confirm=t"
           
           Write-Host "Downloading Macro Recorder..."
           Invoke-WebRequest -Uri $directUrl -OutFile $rarPath
@@ -88,7 +88,6 @@ jobs:
           $anydeskPath = "$env:TEMP\AnyDesk.exe"
           
           Invoke-WebRequest -Uri $anydeskUrl -OutFile $anydeskPath
-          
           Start-Process -FilePath $anydeskPath -ArgumentList "--install", "$env:ProgramFiles\AnyDesk", "--silent", "--create-desktop-icon" -Wait
           Write-Host "AnyDesk Installed Successfully!"
 
