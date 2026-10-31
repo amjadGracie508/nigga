@@ -1,19 +1,14 @@
-name: RDP
+Name: RDP
 
 on:
   workflow_dispatch:
-    inputs:
-      ts_hostname:
-        description: "Tailscale Hostname (e.g., amjad1, amjad2)"
-        required: true
-        default: "amjad1"
 
 permissions: write-all
 
 jobs:
   secure-rdp:
     runs-on: windows-latest
-    timeout-minutes: 360
+    timeout-minutes: 3600
 
     steps:
       - name: Configure Core RDP Settings
@@ -26,13 +21,12 @@ jobs:
                            -Name "SecurityLayer" -Value 0 -Force
 
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
-          
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
 
           Restart-Service -Name TermService -Force
 
-      - name: Create RDP User with Policy Bypass
+      - name: Set Password for Main GitHub User (runneradmin)
         run: |
           secedit /export /cfg C:\secpol.cfg
           (Get-Content C:\secpol.cfg) -replace 'PasswordComplexity = 1', 'PasswordComplexity = 0' | Set-Content C:\secpol.cfg
@@ -40,75 +34,78 @@ jobs:
           secedit /configure /db C:\windows\security\local.sdb /cfg C:\secpol.cfg /areas SECURITYPOLICY
           Remove-Item C:\secpol.cfg -Force
 
-          $securePass = ConvertTo-SecureString "rdp123456" -AsPlainText -Force
+          $username = "runneradmin"
+          $password = "rdp123456"
           
-          $user = Get-LocalUser -Name "rdp" -ErrorAction SilentlyContinue
-          if (-not $user) {
-              New-LocalUser -Name "rdp" -Password $securePass -AccountNeverExpires
-          } else {
-              Set-LocalUser -Name "rdp" -Password $securePass
-              Enable-LocalUser -Name "rdp"
-          }
+          $securePass = ConvertTo-SecureString $password -AsPlainText -Force
+          Set-LocalUser -Name $username -Password $securePass
+          
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member $username -ErrorAction SilentlyContinue
+          
+          echo "RDP_CREDS=User: $username | Password: $password" >> $env:GITHUB_ENV
 
-          Add-LocalGroupMember -Group "Administrators" -Member "rdp" -ErrorAction SilentlyContinue
-          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "rdp" -ErrorAction SilentlyContinue
+      - name: Install Browser Extensions
+        run: |
+          $chromePath = "HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist"
+          if (-not (Test-Path $chromePath)) { New-Item -Path $chromePath -Force | Out-Null }
+          New-ItemProperty -Path $chromePath -Name "1" -Value "lfkgcfakbpblpflbjanpoaipofoodnen;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
+          New-ItemProperty -Path $chromePath -Name "2" -Value "majdfhpaihoncoakbjgbdhglocklcgno;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
+          
+          $edgePath = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist"
+          if (-not (Test-Path $edgePath)) { New-Item -Path $edgePath -Force | Out-Null }
+          New-ItemProperty -Path $edgePath -Name "1" -Value "pciakllldcajllepkbbihkmfkikheffb;https://edge.microsoft.com/extensionwebstorebase/v1/crx" -PropertyType String -Force | Out-Null
 
-      - name: Download RAR File, Move to Desktop Root & Install Automation Tools
+      - name: Install Macro Recorder & AnyDesk
         shell: pwsh
         run: |
-          Write-Host "Installing gdown..."
-          pip install gdown -q
-          
           $desktopPath = "C:\Users\Public\Desktop"
-          Set-Location -Path $desktopPath
+          $rarPath = "$desktopPath\ahmad.rar"
+          $extractPath = "$desktopPath\ahmad_extracted"
           
-          Write-Host "Downloading RAR file from Google Drive..."
-          gdown "https://drive.google.com/uc?id=1liaKavqfUbyqYsos_0NZuA1KWqq9r-HH"
+          $directUrl = "https://drive.usercontent.google.com/download?id=1liaKavqfUbyqYsos_0NZuA1KWqq9r-HH&export=download&authuser=0"
           
-          # 1. Extract RAR/ZIP Archive
-          $archives = Get-ChildItem -Path $desktopPath | Where-Object { $_.Extension -match "\.(zip|rar)$" }
-          foreach ($archive in $archives) {
-              Write-Host "Extracting $($archive.Name)..."
-              7z x "$($archive.FullName)" -o"$desktopPath" -y
-              Write-Host "Extracted successfully!"
+          Write-Host "Downloading Macro Recorder..."
+          Invoke-WebRequest -Uri $directUrl -OutFile $rarPath
+          
+          if (Test-Path $rarPath) { & "C:\Program Files\7-Zip\7z.exe" x $rarPath -o"$extractPath" -y }
+          
+          Write-Host "Installing Macro Recorder Setup..."
+          $installerPath = "$extractPath\MacroRecorderSetup.exe"
+          if (Test-Path $installerPath) {
+              Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/quiet", "/NORESTART" -Wait
           }
 
-          # 2. Copy all files from nested inner folders directly to Desktop Root
-          Write-Host "Moving all subfolder contents to Desktop root..."
-          Get-ChildItem -Path $desktopPath -Recurse -File | ForEach-Object {
-              if ($_.DirectoryName -ne $desktopPath) {
-                  Copy-Item -Path $_.FullName -Destination $desktopPath -Force
-              }
-          }
+          Write-Host "Registering Macro Recorder in Registry..."
+          $regPath = "HKCU:\SOFTWARE\Jitbit\Macro Recorder"
+          if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
+          $serialKey = "HGCNNGujba4SdhQELI56YkubWcJe4MMhOw6mrqdA3WdWKp63lGmQgQSw"
+          New-ItemProperty -Path $regPath -Name "Email" -Value "1" -PropertyType String -Force | Out-Null
+          New-ItemProperty -Path $regPath -Name "Code" -Value $serialKey -PropertyType String -Force | Out-Null
 
-          # 3. Install Macro Recorder / Auto Clicker EXEs
-          Write-Host "Searching and installing EXE automation setups..."
-          $exeFiles = Get-ChildItem -Path $desktopPath -Filter "*.exe" -Recurse
-          foreach ($exe in $exeFiles) {
-              Write-Host "Installing $($exe.Name)..."
-              Start-Process -FilePath $exe.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/S", "/quiet" -NoNewWindow -Wait
-          }
-          Write-Host "All automation tools processing completed!"
-
-          # 4. Google Chrome Extensions Setup
-          $chromePolicyPath = "HKLM:\Software\Policies\Google\Chrome\ExtensionInstallForcelist"
-          if (!(Test-Path $chromePolicyPath)) { New-Item -Path $chromePolicyPath -Force | Out-Null }
-          New-ItemProperty -Path $chromePolicyPath -Name "1" -Value "majdfhpaihoncoakbjgbdhglocklcgno;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
-          New-ItemProperty -Path $chromePolicyPath -Name "2" -Value "lfkgcfakbpblpflbjanpoaipofoodnen;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
+          # ---------------------------------------------------------
+          # AnyDesk کو ڈاؤن لوڈ اور انسٹال کرنا
+          # ---------------------------------------------------------
+          Write-Host "Downloading and Installing AnyDesk..."
+          $anydeskUrl = "https://download.anydesk.com/AnyDesk.exe"
+          $anydeskPath = "$env:TEMP\AnyDesk.exe"
+          
+          Invoke-WebRequest -Uri $anydeskUrl -OutFile $anydeskPath
+          
+          # AnyDesk کو سائلنٹلی انسٹال کرنا تاکہ ڈیسک ٹاپ پر شارٹ کٹ بھی آ جائے
+          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "$env:ProgramFiles\AnyDesk", "--silent", "--create-desktop-icon" -Wait
+          Write-Host "AnyDesk Installed Successfully!"
 
       - name: Install Tailscale
         run: |
           $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
           $installerPath = "$env:TEMP\tailscale.msi"
-          
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
           Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
           Remove-Item $installerPath -Force
 
       - name: Establish Tailscale Connection
         run: |
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=${{ github.event.inputs.ts_hostname }} --accept-routes
-          
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ahmad --accept-routes
           $tsIP = $null
           $retries = 0
           while (-not $tsIP -and $retries -lt 10) {
@@ -116,28 +113,19 @@ jobs:
               Start-Sleep -Seconds 5
               $retries++
           }
-          
-          if (-not $tsIP) {
-              Write-Error "Tailscale IP not assigned. Exiting."
-              exit 1
-          }
+          if (-not $tsIP) { Write-Error "Tailscale IP not assigned. Exiting."; exit 1 }
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
 
       - name: Verify RDP Accessibility
         run: |
-          Write-Host "$env:TAILSCALE_IP"
           $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
-          if (-not $testResult.TcpTestSucceeded) {
-              Write-Error "TCP connection to RDP port 3389 failed"
-              exit 1
-          }
+          if (-not $testResult.TcpTestSucceeded) { Write-Error "TCP connection failed"; exit 1 }
 
       - name: Maintain Connection
         run: |
-          Write-Host "`n=================="
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          Write-Host "Hostname: ${{ github.event.inputs.ts_hostname }}"
-          Write-Host "Username: rdp"
+          Write-Host "`n=== RDP ACCESS ==="
+          Write-Host "Address: $env:TAILSCALE_IP"
+          Write-Host "Username: runneradmin"
           Write-Host "Password: rdp123456"
           Write-Host "==================`n"
           
