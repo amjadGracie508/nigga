@@ -14,11 +14,11 @@ jobs:
       - name: Configure Core RDP Settings
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
-                             -Name "fDenyTSConnections" -Value 0 -Force
+                           -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                             -Name "UserAuthentication" -Value 0 -Force
+                           -Name "UserAuthentication" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                             -Name "SecurityLayer" -Value 0 -Force
+                           -Name "SecurityLayer" -Value 0 -Force
 
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
@@ -62,6 +62,7 @@ jobs:
           $rarPath = "$desktopPath\ahmad.rar"
           $extractPath = "$desktopPath\ahmad_extracted"
           
+          # نیا گوگل ڈرائیو ڈاؤن لوڈ لنک یہاں اپ ڈیٹ کر دیا گیا ہے
           $directUrl = "https://drive.usercontent.google.com/download?id=1liaKavqfUbyqYsos_0NZuA1KWqq9r-HH&export=download&authuser=0"
           
           Write-Host "Downloading Macro Recorder..."
@@ -82,12 +83,16 @@ jobs:
           New-ItemProperty -Path $regPath -Name "Email" -Value "1" -PropertyType String -Force | Out-Null
           New-ItemProperty -Path $regPath -Name "Code" -Value $serialKey -PropertyType String -Force | Out-Null
 
+          # ---------------------------------------------------------
+          # AnyDesk کو ڈاؤن لوڈ اور انسٹال کرنا
+          # ---------------------------------------------------------
           Write-Host "Downloading and Installing AnyDesk..."
           $anydeskUrl = "https://download.anydesk.com/AnyDesk.exe"
           $anydeskPath = "$env:TEMP\AnyDesk.exe"
           
           Invoke-WebRequest -Uri $anydeskUrl -OutFile $anydeskPath
           
+          # AnyDesk کو سائلنٹلی انسٹال کرنا تاکہ ڈیسک ٹاپ پر شارٹ کٹ بھی آ جائے
           Start-Process -FilePath $anydeskPath -ArgumentList "--install", "$env:ProgramFiles\AnyDesk", "--silent", "--create-desktop-icon" -Wait
           Write-Host "AnyDesk Installed Successfully!"
 
