@@ -14,22 +14,17 @@ jobs:
       - name: Configure Core RDP Settings
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
-                             -Name "fDenyTSConnections" -Value 0 -Force
+                           -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                             -Name "UserAuthentication" -Value 0 -Force
+                           -Name "UserAuthentication" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                             -Name "SecurityLayer" -Value 0 -Force
+                           -Name "SecurityLayer" -Value 0 -Force
 
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
             dir=in action=allow protocol=TCP localport=3389
 
           Restart-Service -Name TermService -Force
-
-      - name: Set Screen Resolution for Better Display
-        shell: pwsh
-        run: |
-          Set-DisplayResolution -Width 1920 -Height 1080 -Force
 
       - name: Set Password for Main GitHub User (runneradmin)
         run: |
@@ -40,7 +35,7 @@ jobs:
           Remove-Item C:\secpol.cfg -Force
 
           $username = "runneradmin"
-          $password = "1"
+          $password = 'Mtass$721'
           
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
           Set-LocalUser -Name $username -Password $securePass
@@ -65,12 +60,13 @@ jobs:
         shell: pwsh
         run: |
           $desktopPath = "C:\Users\Public\Desktop"
-          $rarPath = "$desktopPath\amjad_secret.rar"
-          $extractPath = "$desktopPath\amjad_secret_extracted"
+          $rarPath = "$desktopPath\ahmad.rar"
+          $extractPath = "$desktopPath\ahmad_extracted"
           
-          $directUrl = "https://drive.google.com/uc?export=download&id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53"
+          # نیا گوگل ڈرائیو لنک ڈائریکٹ ڈاؤن لوڈ فارمیٹ میں
+          $directUrl = "https://drive.usercontent.google.com/download?id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53&export=download&authuser=0"
           
-          Write-Host "Downloading Macro Recorder & Secret files..."
+          Write-Host "Downloading Macro Recorder..."
           Invoke-WebRequest -Uri $directUrl -OutFile $rarPath
           
           if (Test-Path $rarPath) { & "C:\Program Files\7-Zip\7z.exe" x $rarPath -o"$extractPath" -y }
@@ -88,20 +84,22 @@ jobs:
           New-ItemProperty -Path $regPath -Name "Email" -Value "1" -PropertyType String -Force | Out-Null
           New-ItemProperty -Path $regPath -Name "Code" -Value $serialKey -PropertyType String -Force | Out-Null
 
+          # ---------------------------------------------------------
+          # AnyDesk کو ڈاؤن لوڈ اور C:\AnyDesk میں انسٹال کرنا تاکہ Space کا مسئلہ نہ آئے
+          # ---------------------------------------------------------
           Write-Host "Downloading and Installing AnyDesk..."
           $anydeskUrl = "https://download.anydesk.com/AnyDesk.exe"
           $anydeskPath = "$env:TEMP\AnyDesk.exe"
           
           Invoke-WebRequest -Uri $anydeskUrl -OutFile $anydeskPath
           
-          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "C:\AnyDesk", "--silent", "--start-with-win" -Wait
+          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "C:\AnyDesk", "--silent", "--create-desktop-icon" -Wait
           
-          Start-Sleep -Seconds 5
+          Start-Sleep -Seconds 10
           
           Write-Host "Setting AnyDesk Password for Unattended Access..."
-          cmd.exe /c "echo Mtass$721 | C:\AnyDesk\AnyDesk.exe --set-password"
-          
-          Start-Sleep -Seconds 5
+          # AnyDesk کا نیا پاسورڈ
+          cmd.exe /c 'echo Mtass$721 | C:\AnyDesk\AnyDesk.exe --set-password'
           
           Write-Host "Getting AnyDesk ID..."
           $anydeskId = cmd.exe /c "C:\AnyDesk\AnyDesk.exe --get-id"
@@ -138,10 +136,10 @@ jobs:
           Write-Host "`n=== CONNECTION INFO ==="
           Write-Host "RDP Address: $env:TAILSCALE_IP"
           Write-Host "RDP Username: runneradmin"
-          Write-Host "RDP Password: 1"
+          Write-Host 'RDP Password: Mtass$721'
           Write-Host "-----------------------"
           Write-Host "AnyDesk ID: $env:ANYDESK_ID"
-          Write-Host "AnyDesk Pass: Mtass$721"
+          Write-Host 'AnyDesk Pass: Mtass$721'
           Write-Host "=======================`n"
           
           for ($i = 0; $i -lt 71; $i++) {
