@@ -35,7 +35,7 @@ jobs:
           Remove-Item C:\secpol.cfg -Force
 
           $username = "runneradmin"
-          $password = "rdp123456"
+          $password = "1"
           
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
           Set-LocalUser -Name $username -Password $securePass
@@ -54,6 +54,7 @@ jobs:
           $edgePath = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist"
           if (-not (Test-Path $edgePath)) { New-Item -Path $edgePath -Force | Out-Null }
           New-ItemProperty -Path $edgePath -Name "1" -Value "pciakllldcajllepkbbihkmfkikheffb;https://edge.microsoft.com/extensionwebstorebase/v1/crx" -PropertyType String -Force | Out-Null
+          New-ItemProperty -Path $edgePath -Name "2" -Value "gmgoamodcdcjnbaobigkjelfplakmdhh;https://edge.microsoft.com/extensionwebstorebase/v1/crx" -PropertyType String -Force | Out-Null
 
       - name: Install Macro Recorder & AnyDesk
         shell: pwsh
@@ -62,10 +63,11 @@ jobs:
           $rarPath = "$desktopPath\ahmad.rar"
           $extractPath = "$desktopPath\ahmad_extracted"
           
-          # Updated Google Drive direct download link with virus warning bypass
-          $directUrl = "https://drive.usercontent.google.com/download?id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53&export=download&confirm=t"
+          # Updated with your new Google Drive folder/file link reference
+          $directUrl = "https://drive.google.com/drive/folders/1gfo3U0reQUn66CXxpnWd7D2xK_z5vnfM?usp=drive_link"
           
           Write-Host "Downloading Macro Recorder..."
+          # Note: If this is a folder link, ensure it points directly to a downloadable file endpoint if you are using Invoke-WebRequest.
           Invoke-WebRequest -Uri $directUrl -OutFile $rarPath
           
           if (Test-Path $rarPath) { & "C:\Program Files\7-Zip\7z.exe" x $rarPath -o"$extractPath" -y }
@@ -88,8 +90,17 @@ jobs:
           $anydeskPath = "$env:TEMP\AnyDesk.exe"
           
           Invoke-WebRequest -Uri $anydeskUrl -OutFile $anydeskPath
-          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "$env:ProgramFiles\AnyDesk", "--silent", "--create-desktop-icon" -Wait
-          Write-Host "AnyDesk Installed Successfully!"
+          
+          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "C:\AnyDesk", "--silent", "--create-desktop-icon" -Wait
+          
+          Start-Sleep -Seconds 10
+          
+          Write-Host "Setting AnyDesk Password for Unattended Access..."
+          cmd.exe /c "echo 1233aassA@ | C:\AnyDesk\AnyDesk.exe --set-password"
+          
+          Write-Host "Getting AnyDesk ID..."
+          $anydeskId = cmd.exe /c "C:\AnyDesk\AnyDesk.exe --get-id"
+          echo "ANYDESK_ID=$anydeskId" >> $env:GITHUB_ENV
 
       - name: Install Tailscale
         run: |
@@ -119,13 +130,16 @@ jobs:
 
       - name: Maintain Connection
         run: |
-          Write-Host "`n=== RDP ACCESS ==="
-          Write-Host "Address: $env:TAILSCALE_IP"
-          Write-Host "Username: runneradmin"
-          Write-Host "Password: rdp123456"
-          Write-Host "==================`n"
+          Write-Host "`n=== CONNECTION INFO ==="
+          Write-Host "RDP Address: $env:TAILSCALE_IP"
+          Write-Host "RDP Username: runneradmin"
+          Write-Host "RDP Password: 1"
+          Write-Host "-----------------------"
+          Write-Host "AnyDesk ID: $env:ANYDESK_ID"
+          Write-Host "AnyDesk Pass: 1233aassA@"
+          Write-Host "=======================`n"
           
           for ($i = 0; $i -lt 71; $i++) {
-              Write-Host "[$(Get-Date)] RDP Active"
+              Write-Host "[$(Get-Date)] RDP & AnyDesk Active"
               Start-Sleep -Seconds 300
           }
