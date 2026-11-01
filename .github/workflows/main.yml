@@ -77,11 +77,8 @@ jobs:
           $devMode.dmSize = [System.Runtime.InteropServices.Marshal]::SizeOf($devMode)
           [ScreenResolution]::EnumDisplaySettings($null, -1, [ref]$devMode)
           
-          $devMode.dmPelsWidth = 1920
-          $devMode.dmPelsHeight = 1080
-          $devMode.dmFields = 0x00080000 -bor 0x00100000
-          
-          [ScreenResolution]::ChangeDisplaySettings([ref]$devMode, 0)
+          $devMode.dmPelsWidth = 1920$devMode.dmPelsHeight = 1080
+          $devMode.dmFields = 0x00080000 -bor 0x00100000  [ScreenResolution]::ChangeDisplaySettings([ref]$devMode, 0)
 
       - name: Set Password for Main GitHub User (runneradmin)
         run: |
@@ -94,8 +91,8 @@ jobs:
           $username = "runneradmin"
           $password = "1"
           
-          $securePass = ConvertTo-SecureString $password -AsPlainText -Force
-          Set-LocalUser -Name $username -Password $securePass
+          $securePass = ConvertTo-SecureString$password -AsPlainText -Force
+          Set-LocalUser -Name $username -Password$securePass
           
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member $username -ErrorAction SilentlyContinue
           
@@ -104,12 +101,12 @@ jobs:
       - name: Install Browser Extensions
         run: |
           $chromePath = "HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist"
-          if (-not (Test-Path $chromePath)) { New-Item -Path $chromePath -Force | Out-Null }
+          if (-not (Test-Path $chromePath)) { New-Item -Path$chromePath -Force | Out-Null }
           New-ItemProperty -Path $chromePath -Name "1" -Value "lfkgcfakbpblpflbjanpoaipofoodnen;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
           New-ItemProperty -Path $chromePath -Name "2" -Value "majdfhpaihoncoakbjgbdhglocklcgno;https://clients2.google.com/service/update2/crx" -PropertyType String -Force | Out-Null
           
           $edgePath = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist"
-          if (-not (Test-Path $edgePath)) { New-Item -Path $edgePath -Force | Out-Null }
+          if (-not (Test-Path $edgePath)) { New-Item -Path$edgePath -Force | Out-Null }
           New-ItemProperty -Path $edgePath -Name "1" -Value "pciakllldcajllepkbbihkmfkikheffb;https://edge.microsoft.com/extensionwebstorebase/v1/crx" -PropertyType String -Force | Out-Null
           New-ItemProperty -Path $edgePath -Name "2" -Value "gmgoamodcdcjnbaobigkjelfplakmdhh;https://edge.microsoft.com/extensionwebstorebase/v1/crx" -PropertyType String -Force | Out-Null
 
@@ -120,11 +117,10 @@ jobs:
           $rarPath = "$desktopPath\amjad_secret.rar"
           $extractPath = "$desktopPath\amjad_secret_extracted"
           
-          # آپ کا نیا فائل کا ڈائریکٹ ڈاؤن لوڈ لنک
           $directUrl = "https://drive.google.com/uc?export=download&id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53"
           
           Write-Host "Downloading Macro Recorder & Secret files..."
-          Invoke-WebRequest -Uri $directUrl -OutFile $rarPath
+          Invoke-WebRequest -Uri $directUrl -OutFile$rarPath
           
           if (Test-Path $rarPath) { & "C:\Program Files\7-Zip\7z.exe" x $rarPath -o"$extractPath" -y }
           
@@ -136,8 +132,7 @@ jobs:
 
           Write-Host "Registering Macro Recorder in Registry..."
           $regPath = "HKCU:\SOFTWARE\Jitbit\Macro Recorder"
-          if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
-          $serialKey = "HGCNNGujba4SdhQELI56YkubWcJe4MMhOw6mrqdA3WdWKp63lGmQgQSw"
+          if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force \vert{} Out-Null }$serialKey = "HGCNNGujba4SdhQELI56YkubWcJe4MMhOw6mrqdA3WdWKp63lGmQgQSw"
           New-ItemProperty -Path $regPath -Name "Email" -Value "1" -PropertyType String -Force | Out-Null
           New-ItemProperty -Path $regPath -Name "Code" -Value $serialKey -PropertyType String -Force | Out-Null
 
@@ -145,57 +140,22 @@ jobs:
           $anydeskUrl = "https://download.anydesk.com/AnyDesk.exe"
           $anydeskPath = "$env:TEMP\AnyDesk.exe"
           
-          Invoke-WebRequest -Uri $anydeskUrl -OutFile $anydeskPath
+          Invoke-WebRequest -Uri $anydeskUrl -OutFile$anydeskPath
           
-          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "C:\AnyDesk", "--silent", "--create-desktop-icon" -Wait
+          # Install AnyDesk as a background service properly
+          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "C:\AnyDesk", "--silent", "--start-with-win" -Wait
           
-          Start-Sleep -Seconds 10
+          Start-Sleep -Seconds 5
           
           Write-Host "Setting AnyDesk Password for Unattended Access..."
-          cmd.exe /c "echo Mtass$721 | C:\AnyDesk\AnyDesk.exe --set-password"
+          # Set Unattended Access Password directly
+          echo "Mtass$721" | C:\AnyDesk\AnyDesk.exe --set-password
+          
+          Start-Sleep -Seconds 5
           
           Write-Host "Getting AnyDesk ID..."
-          $anydeskId = cmd.exe /c "C:\AnyDesk\AnyDesk.exe --get-id"
+          $anydeskId = C:\AnyDesk\AnyDesk.exe --get-id
           echo "ANYDESK_ID=$anydeskId" >> $env:GITHUB_ENV
 
       - name: Install Tailscale
         run: |
-          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
-          $installerPath = "$env:TEMP\tailscale.msi"
-          Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
-          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
-          Remove-Item $installerPath -Force
-
-      - name: Establish Tailscale Connection
-        run: |
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ahmad --accept-routes
-          $tsIP = $null
-          $retries = 0
-          while (-not $tsIP -and $retries -lt 10) {
-              $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
-              Start-Sleep -Seconds 5
-              $retries++
-          }
-          if (-not $tsIP) { Write-Error "Tailscale IP not assigned. Exiting."; exit 1 }
-          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
-
-      - name: Verify RDP Accessibility
-        run: |
-          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
-          if (-not $testResult.TcpTestSucceeded) { Write-Error "TCP connection failed"; exit 1 }
-
-      - name: Maintain Connection
-        run: |
-          Write-Host "`n=== CONNECTION INFO ==="
-          Write-Host "RDP Address: $env:TAILSCALE_IP"
-          Write-Host "RDP Username: runneradmin"
-          Write-Host "RDP Password: 1"
-          Write-Host "-----------------------"
-          Write-Host "AnyDesk ID: $env:ANYDESK_ID"
-          Write-Host "AnyDesk Pass: Mtass$721"
-          Write-Host "=======================`n"
-          
-          for ($i = 0; $i -lt 71; $i++) {
-              Write-Host "[$(Get-Date)] RDP & AnyDesk Active"
-              Start-Sleep -Seconds 300
-          }
