@@ -120,7 +120,8 @@ jobs:
           $rarPath = "$desktopPath\amjad_secret.rar"
           $extractPath = "$desktopPath\amjad_secret_extracted"
           
-          $directUrl = "https://drive.google.com/uc?export=download&id=1gfo3U0reQUn66CXxpnWd7D2xK_z5vnfM"
+          # آپ کا نیا فائل کا ڈائریکٹ ڈاؤن لوڈ لنک
+          $directUrl = "https://drive.google.com/uc?export=download&id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53"
           
           Write-Host "Downloading Macro Recorder & Secret files..."
           Invoke-WebRequest -Uri $directUrl -OutFile $rarPath
@@ -151,7 +152,6 @@ jobs:
           Start-Sleep -Seconds 10
           
           Write-Host "Setting AnyDesk Password for Unattended Access..."
-          # یہاں نیا پاسورڈ سیٹ کر دیا گیا ہے
           cmd.exe /c "echo Mtass$721 | C:\AnyDesk\AnyDesk.exe --set-password"
           
           Write-Host "Getting AnyDesk ID..."
