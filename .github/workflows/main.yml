@@ -27,58 +27,9 @@ jobs:
           Restart-Service -Name TermService -Force
 
       - name: Set Screen Resolution for Better Display
+        shell: pwsh
         run: |
-          Add-Type -TypeDefinition @'
-          using System;
-          using System.Runtime.InteropServices;
-          public class ScreenResolution {
-              [DllImport("user32.dll")]
-              public static extern int EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DEVMODE lpDevMode);
-              [DllImport("user32.dll")]
-              public static extern int ChangeDisplaySettings(ref DEVMODE lpDevMode, int dwFlags);
-              [StructLayout(LayoutKind.Sequential)]
-              public struct DEVMODE {
-                  [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-                  public string dmDeviceName;
-                  public short dmSpecVersion;
-                  public short dmDriverVersion;
-                  public short dmSize;
-                  public short dmDriverExtra;
-                  public int dmFields;
-                  public int dmPositionX;
-                  public int dmPositionY;
-                  public int dmDisplayOrientation;
-                  public int dmDisplayFixedOutput;
-                  public short dmColor;
-                  public short dmDuplex;
-                  public short dmYResolution;
-                  public short dmTTOption;
-                  public short dmColate;
-                  public short dmFormName;
-                  public short dmLogPixels;
-                  public int dmBitsPerPel;
-                  public int dmPelsWidth;
-                  public int dmPelsHeight;
-                  public int dmDisplayFlags;
-                  public int dmDisplayFrequency;
-                  public int dmICMMethod;
-                  public int dmICMIntent;
-                  public int dmMediaType;
-                  public int dmDitherType;
-                  public int dmReserved1;
-                  public int dmReserved2;
-                  public int dmPanningWidth;
-                  public int dmPanningHeight;
-              }
-          }
-          '@
-          
-          $devMode = New-Object ScreenResolution+DEVMODE
-          $devMode.dmSize = [System.Runtime.InteropServices.Marshal]::SizeOf($devMode)
-          [ScreenResolution]::EnumDisplaySettings($null, -1, [ref]$devMode)
-          
-          $devMode.dmPelsWidth = 1920$devMode.dmPelsHeight = 1080
-          $devMode.dmFields = 0x00080000 -bor 0x00100000  [ScreenResolution]::ChangeDisplaySettings([ref]$devMode, 0)
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
 
       - name: Set Password for Main GitHub User (runneradmin)
         run: |
@@ -112,50 +63,4 @@ jobs:
 
       - name: Install Macro Recorder & AnyDesk
         shell: pwsh
-        run: |
-          $desktopPath = "C:\Users\Public\Desktop"
-          $rarPath = "$desktopPath\amjad_secret.rar"
-          $extractPath = "$desktopPath\amjad_secret_extracted"
-          
-          $directUrl = "https://drive.google.com/uc?export=download&id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53"
-          
-          Write-Host "Downloading Macro Recorder & Secret files..."
-          Invoke-WebRequest -Uri $directUrl -OutFile$rarPath
-          
-          if (Test-Path $rarPath) { & "C:\Program Files\7-Zip\7z.exe" x $rarPath -o"$extractPath" -y }
-          
-          Write-Host "Installing Macro Recorder Setup..."
-          $installerPath = "$extractPath\MacroRecorderSetup.exe"
-          if (Test-Path $installerPath) {
-              Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/quiet", "/NORESTART" -Wait
-          }
-
-          Write-Host "Registering Macro Recorder in Registry..."
-          $regPath = "HKCU:\SOFTWARE\Jitbit\Macro Recorder"
-          if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force \vert{} Out-Null }$serialKey = "HGCNNGujba4SdhQELI56YkubWcJe4MMhOw6mrqdA3WdWKp63lGmQgQSw"
-          New-ItemProperty -Path $regPath -Name "Email" -Value "1" -PropertyType String -Force | Out-Null
-          New-ItemProperty -Path $regPath -Name "Code" -Value $serialKey -PropertyType String -Force | Out-Null
-
-          Write-Host "Downloading and Installing AnyDesk..."
-          $anydeskUrl = "https://download.anydesk.com/AnyDesk.exe"
-          $anydeskPath = "$env:TEMP\AnyDesk.exe"
-          
-          Invoke-WebRequest -Uri $anydeskUrl -OutFile$anydeskPath
-          
-          # Install AnyDesk as a background service properly
-          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "C:\AnyDesk", "--silent", "--start-with-win" -Wait
-          
-          Start-Sleep -Seconds 5
-          
-          Write-Host "Setting AnyDesk Password for Unattended Access..."
-          # Set Unattended Access Password directly
-          echo "Mtass$721" | C:\AnyDesk\AnyDesk.exe --set-password
-          
-          Start-Sleep -Seconds 5
-          
-          Write-Host "Getting AnyDesk ID..."
-          $anydeskId = C:\AnyDesk\AnyDesk.exe --get-id
-          echo "ANYDESK_ID=$anydeskId" >> $env:GITHUB_ENV
-
-      - name: Install Tailscale
         run: |
