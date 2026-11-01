@@ -26,6 +26,63 @@ jobs:
 
           Restart-Service -Name TermService -Force
 
+      - name: Set Screen Resolution for Better Display
+        run: |
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public class ScreenResolution {
+              [DllImport("user32.dll")]
+              public static extern int EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DEVMODE lpDevMode);
+              [DllImport("user32.dll")]
+              public static extern int ChangeDisplaySettings(ref DEVMODE lpDevMode, int dwFlags);
+              [StructLayout(LayoutKind.Sequential)]
+              public struct DEVMODE {
+                  [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+                  public string dmDeviceName;
+                  public short dmSpecVersion;
+                  public short dmDriverVersion;
+                  public short dmSize;
+                  public short dmDriverExtra;
+                  public int dmFields;
+                  public int dmPositionX;
+                  public int dmPositionY;
+                  public int dmDisplayOrientation;
+                  public int dmDisplayFixedOutput;
+                  public short dmColor;
+                  public short dmDuplex;
+                  public short dmYResolution;
+                  public short dmTTOption;
+                  public short dmColate;
+                  public short dmFormName;
+                  public short dmLogPixels;
+                  public int dmBitsPerPel;
+                  public int dmPelsWidth;
+                  public int dmPelsHeight;
+                  public int dmDisplayFlags;
+                  public int dmDisplayFrequency;
+                  public int dmICMMethod;
+                  public int dmICMIntent;
+                  public int dmMediaType;
+                  public int dmDitherType;
+                  public int dmReserved1;
+                  public int dmReserved2;
+                  public int dmPanningWidth;
+                  public int dmPanningHeight;
+              }
+          }
+          '@
+          
+          $devMode = New-Object ScreenResolution+DEVMODE
+          $devMode.dmSize = [System.Runtime.InteropServices.Marshal]::SizeOf($devMode)
+          [ScreenResolution]::EnumDisplaySettings($null, -1, [ref]$devMode)
+          
+          $devMode.dmPelsWidth = 1920
+          $devMode.dmPelsHeight = 1080
+          $devMode.dmFields = 0x00080000 -bor 0x00100000
+          
+          [ScreenResolution]::ChangeDisplaySettings([ref]$devMode, 0)
+
       - name: Set Password for Main GitHub User (runneradmin)
         run: |
           secedit /export /cfg C:\secpol.cfg
@@ -60,14 +117,12 @@ jobs:
         shell: pwsh
         run: |
           $desktopPath = "C:\Users\Public\Desktop"
-          $rarPath = "$desktopPath\ahmad.rar"
-          $extractPath = "$desktopPath\ahmad_extracted"
+          $rarPath = "$desktopPath\amjad_secret.rar"
+          $extractPath = "$desktopPath\amjad_secret_extracted"
           
-          # Updated with your new Google Drive folder/file link reference
-          $directUrl = "https://drive.google.com/drive/folders/1gfo3U0reQUn66CXxpnWd7D2xK_z5vnfM?usp=drive_link"
+          $directUrl = "https://drive.google.com/uc?export=download&id=1gfo3U0reQUn66CXxpnWd7D2xK_z5vnfM"
           
-          Write-Host "Downloading Macro Recorder..."
-          # Note: If this is a folder link, ensure it points directly to a downloadable file endpoint if you are using Invoke-WebRequest.
+          Write-Host "Downloading Macro Recorder & Secret files..."
           Invoke-WebRequest -Uri $directUrl -OutFile $rarPath
           
           if (Test-Path $rarPath) { & "C:\Program Files\7-Zip\7z.exe" x $rarPath -o"$extractPath" -y }
@@ -96,7 +151,8 @@ jobs:
           Start-Sleep -Seconds 10
           
           Write-Host "Setting AnyDesk Password for Unattended Access..."
-          cmd.exe /c "echo 1233aassA@ | C:\AnyDesk\AnyDesk.exe --set-password"
+          # یہاں نیا پاسورڈ سیٹ کر دیا گیا ہے
+          cmd.exe /c "echo Mtass$721 | C:\AnyDesk\AnyDesk.exe --set-password"
           
           Write-Host "Getting AnyDesk ID..."
           $anydeskId = cmd.exe /c "C:\AnyDesk\AnyDesk.exe --get-id"
@@ -136,7 +192,7 @@ jobs:
           Write-Host "RDP Password: 1"
           Write-Host "-----------------------"
           Write-Host "AnyDesk ID: $env:ANYDESK_ID"
-          Write-Host "AnyDesk Pass: 1233aassA@"
+          Write-Host "AnyDesk Pass: Mtass$721"
           Write-Host "=======================`n"
           
           for ($i = 0; $i -lt 71; $i++) {
