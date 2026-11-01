@@ -64,3 +64,57 @@ jobs:
       - name: Install Macro Recorder & AnyDesk
         shell: pwsh
         run: |
+          $desktopPath = "C:\Users\Public\Desktop"
+          $rarPath = "$desktopPath\amjad_secret.rar"
+          $extractPath = "$desktopPath\amjad_secret_extracted"
+          
+          $directUrl = "https://drive.google.com/uc?export=download&id=1vhj1T94IFssFmckNgifW-gBJNci4Rc53"
+          
+          Write-Host "Downloading Macro Recorder & Secret files..."
+          Invoke-WebRequest -Uri $directUrl -OutFile$rarPath
+          
+          if (Test-Path $rarPath) { & "C:\Program Files\7-Zip\7z.exe" x $rarPath -o"$extractPath" -y }
+          
+          Write-Host "Installing Macro Recorder Setup..."
+          $installerPath = "$extractPath\MacroRecorderSetup.exe"
+          if (Test-Path $installerPath) {
+              Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/quiet", "/NORESTART" -Wait
+          }
+
+          Write-Host "Registering Macro Recorder in Registry..."
+          $regPath = "HKCU:\SOFTWARE\Jitbit\Macro Recorder"
+          if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force \vert{} Out-Null }$serialKey = "HGCNNGujba4SdhQELI56YkubWcJe4MMhOw6mrqdA3WdWKp63lGmQgQSw"
+          New-ItemProperty -Path $regPath -Name "Email" -Value "1" -PropertyType String -Force | Out-Null
+          New-ItemProperty -Path $regPath -Name "Code" -Value $serialKey -PropertyType String -Force | Out-Null
+
+          Write-Host "Downloading and Installing AnyDesk..."
+          $anydeskUrl = "https://download.anydesk.com/AnyDesk.exe"
+          $anydeskPath = "$env:TEMP\AnyDesk.exe"
+          
+          Invoke-WebRequest -Uri $anydeskUrl -OutFile$anydeskPath
+          
+          Start-Process -FilePath $anydeskPath -ArgumentList "--install", "C:\AnyDesk", "--silent", "--start-with-win" -Wait
+          
+          Start-Sleep -Seconds 5
+          
+          Write-Host "Setting AnyDesk Password for Unattended Access..."
+          cmd.exe /c "echo Mtass$721 | C:\AnyDesk\AnyDesk.exe --set-password"
+          
+          Start-Sleep -Seconds 5
+          
+          Write-Host "Getting AnyDesk ID..."
+          $anydeskId = cmd.exe /c "C:\AnyDesk\AnyDesk.exe --get-id"
+          echo "ANYDESK_ID=$anydeskId" >> $env:GITHUB_ENV
+
+      - name: Install Tailscale
+        run: |
+          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
+          $installerPath = "$env:TEMP\tailscale.msi"
+          Invoke-WebRequest -Uri $tsUrl -OutFile$installerPath
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
+          Remove-Item $installerPath -Force
+
+      - name: Establish Tailscale Connection
+        run: |
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=ahmad --accept-routes$tsIP = $null$retries = 0
+          while (-not
